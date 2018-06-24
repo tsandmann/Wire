@@ -880,22 +880,22 @@ constexpr TwoWire::I2C_Hardware_t TwoWire::i2c3_hardware = {
 #define MAKE_CONST(x) (__builtin_constant_p(x) ? (x) : (x))
 
 #ifdef WIRE_IMPLEMENT_WIRE
-constexpr uintptr_t i2c0_addr = uintptr_t(MAKE_CONST(&KINETIS_I2C0));
+static const uintptr_t i2c0_addr = uintptr_t(MAKE_CONST(&KINETIS_I2C0));
 TwoWire Wire(i2c0_addr, TwoWire::i2c0_hardware);
 void i2c0_isr(void) { Wire.isr(); }
 #endif
 #ifdef WIRE_IMPLEMENT_WIRE1
-constexpr uintptr_t i2c1_addr = uintptr_t(MAKE_CONST(&KINETIS_I2C1));
+static const uintptr_t i2c1_addr = uintptr_t(MAKE_CONST(&KINETIS_I2C1));
 TwoWire Wire1(i2c1_addr, TwoWire::i2c1_hardware);
 void i2c1_isr(void) { Wire1.isr(); }
 #endif
 #ifdef WIRE_IMPLEMENT_WIRE2
-constexpr uintptr_t i2c2_addr = uintptr_t(MAKE_CONST(&KINETIS_I2C2));
+static const uintptr_t i2c2_addr = uintptr_t(MAKE_CONST(&KINETIS_I2C2));
 TwoWire Wire2(i2c2_addr, TwoWire::i2c2_hardware);
 void i2c2_isr(void) { Wire2.isr(); }
 #endif
 #ifdef WIRE_IMPLEMENT_WIRE3
-constexpr uintptr_t i2c3_addr = uintptr_t(MAKE_CONST(&KINETIS_I2C3));
+static const uintptr_t i2c3_addr = uintptr_t(MAKE_CONST(&KINETIS_I2C3));
 TwoWire Wire3(i2c3_addr, TwoWire::i2c3_hardware);
 void i2c3_isr(void) { Wire3.isr(); }
 #endif
