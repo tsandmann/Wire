@@ -27,7 +27,7 @@
 #include <Arduino.h>
 #include "Wire.h"
 
-#if defined(__arm__) && defined(TEENSYDUINO)
+#if defined(__arm__) && defined(TEENSYDUINO) && (defined(__MKL26Z64__) || defined(__MK20DX128__) || defined(__MK20DX256__) || defined(__MK64FX512__) || defined(__MK66FX1M0__))
 
 #include "kinetis.h"
 #include <string.h> // for memcpy
@@ -802,6 +802,23 @@ uint8_t TwoWire::requestFrom(uint8_t address, uint8_t length, uint8_t sendStop)
 	if (sendStop) port().C1 = I2C_C1_IICEN;
 	rxBufferLength = count;
 	return count;
+}
+
+uint8_t TwoWire::requestFrom(uint8_t addr, uint8_t qty, uint32_t iaddr, uint8_t n, uint8_t stop)
+{
+	if (n > 0) {
+		union { uint32_t ul; uint8_t b[4]; } iaddress;
+		iaddress.ul = iaddr;
+		beginTransmission(addr);
+		if (n > 3) n = 3;
+		do {
+			n = n - 1;
+			write(iaddress.b[n]);
+		} while (n > 0);
+		endTransmission(false);
+	}
+	if (qty > BUFFER_LENGTH) qty = BUFFER_LENGTH;
+	return requestFrom(addr, qty, stop);
 }
 
 // for compatibility with examples that directly call this AVR-specific function
