@@ -24,75 +24,47 @@
  * THE SOFTWARE.
  */
 
-#ifndef TwoWireKinetis_h
-#define TwoWireKinetis_h
+#ifndef TwoWireIMXRT_h
+#define TwoWireIMXRT_h
 
-#if defined(__arm__) && defined(TEENSYDUINO) && (defined(__MKL26Z64__) || defined(__MK20DX128__) || defined(__MK20DX256__) || defined(__MK64FX512__) || defined(__MK66FX1M0__))
+#if defined(__IMXRT1052__) || defined(__IMXRT1062__)
 
 #include <Arduino.h>
 #include <stdint.h>
 
 #define BUFFER_LENGTH 32
-#define WIRE_HAS_END 1
-
-
-// Teensy LC
-#if defined(__MKL26Z64__)
-#define WIRE_IMPLEMENT_WIRE
-//Wire1 consumes precious memory on Teensy LC
-//#define WIRE_IMPLEMENT_WIRE1
-#define WIRE_HAS_STOP_INTERRUPT
-
-// Teensy 3.0
-#elif defined(__MK20DX128__)
-#define WIRE_IMPLEMENT_WIRE
-
-// Teensy 3.1 & 3.2
-#elif defined(__MK20DX256__)
-#define WIRE_IMPLEMENT_WIRE
-#define WIRE_IMPLEMENT_WIRE1
-
-// Teensy 3.5
-#elif defined(__MK64FX512__)
+//#define WIRE_HAS_END 1
 #define WIRE_IMPLEMENT_WIRE
 #define WIRE_IMPLEMENT_WIRE1
 #define WIRE_IMPLEMENT_WIRE2
-#define WIRE_HAS_START_INTERRUPT
-#define WIRE_HAS_STOP_INTERRUPT
-
-// Teensy 3.6
-#elif defined(__MK66FX1M0__)
-#define WIRE_IMPLEMENT_WIRE
-#define WIRE_IMPLEMENT_WIRE1
-#define WIRE_IMPLEMENT_WIRE2
-//Wire3 is seldom used on Teensy 3.6
-//#define WIRE_IMPLEMENT_WIRE3
-#define WIRE_HAS_START_INTERRUPT
-#define WIRE_HAS_STOP_INTERRUPT
-
-#endif
-
 
 class TwoWire : public Stream
 {
 public:
 	// Hardware description struct
+	static const uint8_t cnt_sda_pins = 2;
+	static const uint8_t cnt_scl_pins = 2;
+	typedef struct {
+		const uint8_t 		pin;		// The pin number
+		const uint32_t 		mux_val;	// Value to set for mux;
+		volatile uint32_t	*select_input_register; // Which register controls the selection
+		const uint32_t		select_val;	// Value for that selection
+	} pin_info_t;
+
 	typedef struct {
 		volatile uint32_t &clock_gate_register;
 		uint32_t clock_gate_mask;
-		uint8_t  sda_pin[5];
-		uint8_t  sda_mux[5];
-		uint8_t  scl_pin[5];
-		uint8_t  scl_mux[5];
+		pin_info_t sda_pins[cnt_sda_pins];
+		pin_info_t scl_pins[cnt_scl_pins];
 		IRQ_NUMBER_t irq;
 	} I2C_Hardware_t;
-	static const I2C_Hardware_t i2c0_hardware;
 	static const I2C_Hardware_t i2c1_hardware;
 	static const I2C_Hardware_t i2c2_hardware;
 	static const I2C_Hardware_t i2c3_hardware;
+	static const I2C_Hardware_t i2c4_hardware;
 public:
-	constexpr TwoWire(uintptr_t port_addr, const I2C_Hardware_t &myhardware)
-		: port_addr(port_addr), hardware(myhardware) {
+	constexpr TwoWire(IMXRT_LPI2C_t *myport, const I2C_Hardware_t &myhardware)
+		: port(myport), hardware(myhardware) {
 	}
 	void begin();
 	void begin(uint8_t address);
@@ -102,7 +74,7 @@ public:
 	void end();
 	void setClock(uint32_t frequency);
 	void setSDA(uint8_t pin);
-	void setSCL(uint8_t pin);
+	void setSCL(uint8_t pin); 
 	void beginTransmission(uint8_t address) {
 		txBuffer[0] = (address << 1);
 		transmitting = 1;
@@ -180,14 +152,14 @@ public:
 	}
 	using Print::write;
 private:
-	KINETIS_I2C_t& port() { return (*(KINETIS_I2C_t *) port_addr); }
-	uint8_t i2c_status(void) {
-		return port().S;
-	}
-	void isr(void);
-	bool wait_idle(void);
-	uintptr_t port_addr;
+	//void isr(void);
+	//bool wait_idle(void);
+	bool wait_idle();
+	bool force_clock();
+	IMXRT_LPI2C_t * const port;
 	const I2C_Hardware_t &hardware;
+	uint8_t	sda_pin_index_ = 0x0;	// default is always first item
+	uint8_t	scl_pin_index_ = 0x0;
 	uint8_t rxBuffer[BUFFER_LENGTH] = {};
 	uint8_t rxBufferIndex = 0;
 	uint8_t rxBufferLength = 0;
@@ -213,25 +185,17 @@ private:
 	friend void sda_rising_isr1(void);
 };
 
-#ifdef WIRE_IMPLEMENT_WIRE
 extern TwoWire Wire;
-#endif
-#ifdef WIRE_IMPLEMENT_WIRE1
 extern TwoWire Wire1;
-#endif
-#ifdef WIRE_IMPLEMENT_WIRE2
 extern TwoWire Wire2;
-#endif
-#ifdef WIRE_IMPLEMENT_WIRE3
 extern TwoWire Wire3;
-#endif
 
 
 class TWBRemulation
 {
 public:
 	inline TWBRemulation & operator = (int val) __attribute__((always_inline)) {
-		if (val == 12 || val == ((F_CPU / 400000) - 16) / 2) { // 22, 52, 112
+		/*if (val == 12 || val == ((F_CPU / 400000) - 16) / 2) { // 22, 52, 112
 			I2C0_C1 = 0;
 			#if F_BUS == 128000000
 			I2C0_F = I2C_F_DIV320; // 400 kHz
@@ -315,11 +279,11 @@ public:
 			I2C0_F = I2C_F_DIV20; // 100 kHz
 			#endif
 			I2C0_C1 = I2C_C1_IICEN;
-		}
+		} */
 		return *this;
 	}
 	inline operator int () const __attribute__((always_inline)) {
-		#if F_BUS == 128000000
+		/* #if F_BUS == 128000000
 		if (I2C0_F == I2C_F_DIV320) return 12;
 		#elif F_BUS == 120000000
 		if (I2C0_F == I2C_F_DIV288) return 12;
@@ -355,7 +319,7 @@ public:
 		if (I2C0_F == I2C_F_DIV20) return 12;
 		#elif F_BUS == 4000000
 		if (I2C0_F == I2C_F_DIV20) return 12;
-		#endif
+		#endif */
 		return 72;
 	}
 };

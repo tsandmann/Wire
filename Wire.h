@@ -22,7 +22,10 @@
 #ifndef TwoWire_h
 #define TwoWire_h
 
-#if defined(__arm__) && defined(TEENSYDUINO)
+#if defined(__IMXRT1052__) || defined(__IMXRT1062__)
+#include "WireIMXRT.h"
+
+#elif defined(__arm__) && defined(TEENSYDUINO)
 #include "WireKinetis.h"
 
 #elif defined(__AVR__)
@@ -68,6 +71,7 @@ class TwoWire : public Stream
     uint8_t requestFrom(uint8_t, uint8_t, uint8_t);
     uint8_t requestFrom(int, int);
     uint8_t requestFrom(int, int, int);
+    uint8_t requestFrom(uint8_t, uint8_t, uint32_t, uint8_t, uint8_t);
     virtual size_t write(uint8_t);
     virtual size_t write(const uint8_t *, size_t);
     virtual int available(void);
