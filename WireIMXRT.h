@@ -195,6 +195,7 @@ class TWBRemulation
 {
 public:
 	inline TWBRemulation & operator = (int val) __attribute__((always_inline)) {
+		(void) val;
 		/*if (val == 12 || val == ((F_CPU / 400000) - 16) / 2) { // 22, 52, 112
 			I2C0_C1 = 0;
 			#if F_BUS == 128000000
