@@ -151,7 +151,7 @@ public:
 		return write((uint8_t)n);
 	}
 	using Print::write;
-private:
+protected:
 	//void isr(void);
 	//bool wait_idle(void);
 	bool wait_idle();

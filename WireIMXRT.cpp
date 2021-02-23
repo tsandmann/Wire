@@ -183,8 +183,8 @@ bool TwoWire::wait_idle()
 uint8_t TwoWire::endTransmission(uint8_t sendStop)
 {
 	uint32_t tx_len = txBufferLength;
-	if (!tx_len) return 4; // no address for transmit
-	if (!wait_idle()) return 4;
+	if (!tx_len) return 1; // no address for transmit
+	if (!wait_idle()) return 2;
 	uint32_t tx_index = 0; // 0=start, 1=addr, 2-(N-1)=data, N=stop
 	elapsedMillis timeout = 0;
 	while (1) {
@@ -209,17 +209,17 @@ uint8_t TwoWire::endTransmission(uint8_t sendStop)
 		uint32_t status = port->MSR; // pg 2884 & 2891
 		if (status & LPI2C_MSR_ALF) {
 			port->MCR |= LPI2C_MCR_RTF | LPI2C_MCR_RRF; // clear FIFOs
-			return 4; // we lost bus arbitration to another master
+			return 3; // we lost bus arbitration to another master
 		}
 		if (status & LPI2C_MSR_NDF) {
 			port->MCR |= LPI2C_MCR_RTF | LPI2C_MCR_RRF; // clear FIFOs
 			port->MTDR = LPI2C_MTDR_CMD_STOP;
-			return 2; // NACK (assume address, TODO: how to tell address from data)
+			return 4; // NACK (assume address, TODO: how to tell address from data)
 		}
 		if ((status & LPI2C_MSR_PLTF) || timeout > 50) {
 			port->MCR |= LPI2C_MCR_RTF | LPI2C_MCR_RRF; // clear FIFOs
 			port->MTDR = LPI2C_MTDR_CMD_STOP; // try to send a stop
-			return 4; // clock stretched too long or generic timeout
+			return 5; // clock stretched too long or generic timeout
 		}
 		// are we done yet?
 		if (tx_index > tx_len) {
@@ -234,7 +234,7 @@ uint8_t TwoWire::endTransmission(uint8_t sendStop)
 
 uint8_t TwoWire::requestFrom(uint8_t address, uint8_t length, uint8_t sendStop)
 {
-	if (!wait_idle()) return 4;
+	if (!wait_idle()) return 255;
 	address = (address & 0x7F) << 1;
 	if (length < 1) length = 1;
 	// if (length > 255) length = 255;
